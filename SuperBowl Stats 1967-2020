@@ -1,0 +1,59 @@
+#In this SQL, I am querying a database to display a collection of statistics related to the Super Bowl.
+
+#1. Which team had the lowest winning score in Super Bowl history?
+SELECT winner, MIN(winner_pts) AS Score
+FROM superbowls;
+
+#2. Which Super Bowl game had the highest scoring game?
+SELECT date, SB, winner AS Winning_Team, MAX(winner_pts) AS Top_Score
+From superbowls;
+
+#3. What are the average amount of points scored in a Super Bowl?
+SELECT (SUM(winner_pts)+SUM(loser_pts))/COUNT(*) AS AVG_SB_PPG
+FROM superbowls;
+
+#4. How many Super Bowl mvp’s did Joe Montana win? 
+SELECT date, sb, mvp, winner, stadium
+FROM superbowls
+WHERE mvp LIKE 'Joe Montana+'
+ORDER BY date;
+
+#5. Which NFL teams have won a Super Bowl more than twice?
+SELECT Winner AS Super_Bowl_Champ , COUNT(SB) AS Rings
+FROM superbowls 
+GROUP BY winner HAVING COUNT(*) >=2
+ORDER BY Rings;
+
+#6. Which states have been the host of the Super Bowl on more than one occasion?
+SELECT state AS Super_Bowl_Host, COUNT(state) AS How_many 
+FROM superbowls
+GROUP BY state HAVING COUNT(state)>1
+ORDER BY state;
+
+#7. List the the Super Bowl games where both the winning and losing teams scored more than 30 points.
+SELECT sb, date, winner, winner_pts, loser, loser_pts
+FROM superbowls
+WHERE winner_pts >= 30 AND loser_pts >= 30
+ORDER BY date;
+
+#8. What is the average Super Bowl score, by rank?
+SELECT sb, date, winner AS Super_Bowl_Winner, winner_pts AS Winning_Score, ROUND(AVG(winner_pts)) AS AVG_Score,
+    CASE
+        WHEN winner_pts > AVG(winner_pts) THEN "Above Average"
+        WHEN winner_pts = Avg(winner_pts) THEN "Average"
+        WHEN winner_pts < Avg(winner_pts) THEN "Below Average"
+    END as "Score Rank"
+FROM superbowls
+GROUP BY super_bowl_winner
+ORDER BY "score rank";
+
+#9. Who is the only player in NFL history to win the Super Bowl MVP while on the losing team?
+SELECT date, sb, mvp AS MVP_Winner, loser AS On_Losing_Team, stadium
+FROM superbowls
+WHERE MVP = 'Chuck Howley'; 
+
+#10. In which states where the Super Bowl MVP's Tom Brady or Joe Montana?
+SELECT date, sb, mvp, winner, stadium, state
+FROM superbowls
+WHERE mvp = 'Tom Brady' OR mvp = 'Joe Montana+'
+ORDER BY winner, state;
