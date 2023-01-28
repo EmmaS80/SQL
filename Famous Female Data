@@ -1,0 +1,35 @@
+#In this SQL, I've queried a database to display statistics related to famous female actresses, singers, fictional characters, and authors.
+
+#1. Name famous female actresses that also sing.
+SELECT DISTINCT fa.a_id, fa.first_name, fa.last_name, fa.net_worth
+FROM female_actresses AS fa
+INNER JOIN female_singers AS fs
+ON fa.a_id = fs.s_id;
+
+#2. Female artists that can sing, act and have a net worth greater than 25000000 in alphabetical order.
+SELECT DISTINCT fa.first_name, fa.last_name, fa.net_worth
+FROM female_actresses AS fa
+LEFT JOIN female_singers AS fs
+ON fa.a_id = fs.s_id
+WHERE fa.net_worth AND fs.net_worth > 25000000
+ORDER BY fa.first_name ASC;
+
+#3. Famous female actresses that have played fictional characters.
+SELECT DISTINCT fa.first_name, fa.last_name, ffc.Fictional_Character, ffc.movie_or_tv_title AS Movie
+FROM Female_Actresses AS fa
+INNER JOIN female_fictional_character AS ffc
+ON fa.a_id = ffc.fc_id
+
+#4. Name the top 2 actresses that have also written a book.
+SELECT fc.first_name, fc.last_name, fc.age, fc.from_state, fc.married
+FROM female_authors AS s
+INNER JOIN female_actresses AS fc
+ON s.w_id = fc.a_id
+LIMIT 2;
+
+#5. Which famous female actresses have yet to play a fictional character?
+SELECT s.first_name, s.last_name, s.age, s.from_state
+FROM female_authors AS s
+LEFT JOIN female_fictional_character AS fc
+ON fc.fc_id = s.w_id
+GROUP BY s.first_name
