@@ -1,0 +1,166 @@
+Covid 19 Data Exploration 
+
+Skills used: Joins, CTE's, Temp Tables, Windows Functions, Aggregate Functions, Creating Views, Converting Data Types
+*/
+
+-- Select Data that we are going to be starting with
+
+Select Location, date, total_cases, new_cases, total_deaths, population
+From PortfolioDatabase.dbo.[Covid deaths]
+Where continent is not null 
+order by 1,2
+
+
+-- Total Cases vs Total Deaths in the US
+-- Shows likelihood of dying if you contract covid in your country
+
+select location, date, total_cases, total_deaths, cast(total_deaths as bigint)/NULLIF(cast(total_cases as float),0)*100 AS deathPercentage
+from PortfolioDatabase.dbo.[Covid deaths]
+where location like 'United_States'
+order by 1, 2
+
+
+--Looking at Total Cases vs Population
+--Shows percentage of population who got Covid by Country
+
+Select Location, date, Population, total_cases, cast(total_cases as bigint)/ (nullif(cast(population as float),0))*100 as PercentPopulationInfected
+From PortfolioDatabase.dbo.[Covid deaths]
+where location like 'United_States'
+order by 1,2
+
+
+-- Countries with Highest Infection Rate compared to Population
+
+Select Location, Population, MAX(total_cases) as HighestInfectionCount,  Max(cast(total_cases as bigint))/(nullif(cast(population as float),0))*100 as PercentPopulationInfected
+FROM PortfolioDatabase.dbo.[Covid deaths]
+--where location like 'United_States'
+Group by Location, Population
+order by PercentPopulationInfected desc
+
+
+-- Countries with Highest Death Count per Population
+
+Select Location, MAX(cast(Total_deaths as int)) as TotalDeathCount
+From PortfolioDatabase.dbo.[Covid deaths]
+--where location like 'United_States'
+Where continent is not null 
+Group by Location
+order by TotalDeathCount desc
+
+
+-- BREAKING THINGS DOWN BY CONTINENT
+-- Showing continents with the highest death count per population
+
+Select location, MAX(cast(Total_deaths as int)) as TotalDeathCount   
+From PortfolioDatabase.dbo.[Covid deaths]
+--where location like 'United_States''
+Where continent is not null 
+Group by location
+order by TotalDeathCount desc
+
+
+-- GLOBAL NUMBERS
+
+Select SUM(cast(new_cases as bigint)) as total_cases, SUM(cast(new_deaths as bigint)) as total_deaths, SUM(cast(new_deaths as bigint))/SUM(nullif(cast(new_cases as float),0))*100 as DeathPercentage
+From PortfolioDatabase.dbo.[Covid deaths]
+--where location like 'United_States'
+where continent is not null 
+--Group By date
+order by 1,2
+
+
+-- Total Population vs Vaccinations
+-- Shows Percentage of Population that has received at least one Covid Vaccine
+
+Select dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations
+, SUM(CONVERT(bigint,vac.new_vaccinations)) OVER (Partition by dea.Location Order by dea.location, dea.Date) as RollingPeopleVaccinated
+--, (RollingPeopleVaccinated/population)*100
+From PortfolioDatabase.dbo.[Covid deaths] dea
+Join PortfolioDatabase.dbo.[covid vaccinations] vac
+	On dea.location = vac.location
+	and dea.date = vac.date
+where dea.continent is not null 
+order by 2,3
+
+
+-- Using CTE to perform Calculation on Partition By in Total Population vs Vaccinations
+-- Shows Percentage of Population that has received at least one Covid Vaccine
+
+With PopvsVac (Continent, Location, Date, Population, New_Vaccinations, RollingPeopleVaccinated)
+as
+(
+Select dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations
+, SUM(CONVERT(bigint,vac.new_vaccinations)) OVER (Partition by dea.Location Order by dea.location, dea.Date) as RollingPeopleVaccinated
+--, cast(RollingPeopleVaccinated as bigint)/nullif(cast(Population as float),0)*100
+From PortfolioDatabase.dbo.[Covid deaths] dea
+Join PortfolioDatabase.dbo.[covid vaccinations] vac
+	On dea.location = vac.location
+	and dea.date = vac.date
+where dea.continent is not null 
+--order by 2,3
+)
+Select *, cast(RollingPeopleVaccinated as bigint)/nullif(cast(Population as float),0)*100
+From PopvsVac
+
+
+-- Using Temp Table to perform Calculation on Partition By in Total Population vs Vaccinations
+-- Shows Percentage of Population that has received at least one Covid Vaccine
+
+DROP Table if exists #PercentPopulationVaccinated
+Create Table #PercentPopulationVaccinated
+(
+Continent nvarchar(255),
+Location nvarchar(255),
+Date datetime,
+Population numeric,
+New_vaccinations numeric,
+RollingPeopleVaccinated numeric
+)
+
+Insert into #PercentPopulationVaccinated
+Select dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations
+, SUM(CONVERT(int,vac.new_vaccinations)) OVER (Partition by dea.Location Order by dea.location, dea.Date) as RollingPeopleVaccinated
+--, (RollingPeopleVaccinated/population)*100
+From PortfolioDatabase.dbo.[Covid deaths]
+Join PortfolioDatabase.dbo.[covid vaccinations] vac
+	On dea.location = vac.location
+	and dea.date = vac.date
+--where dea.continent is not null 
+--order by 2,3
+
+Select *, (RollingPeopleVaccinated/Population)*100
+From #PercentPopulationVaccinated
+
+
+-- Creating View to store data for later visualizations
+-- Shows Percentage of Population that has received at least one Covid Vaccine
+
+Create View PercentPopulationVaccinated as
+Select dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations
+, SUM(CONVERT(int,vac.new_vaccinations)) OVER (Partition by dea.Location Order by dea.location, dea.Date) as RollingPeopleVaccinated
+--, (RollingPeopleVaccinated/population)*100
+From PortfolioDatabase.dbo.[Covid deaths] dea
+Join PortfolioDatabase.dbo.[covid vaccinations] vac
+	On dea.location = vac.location
+	and dea.date = vac.date
+where dea.continent is not null 
+
+
+-- Creating View to store data for later visualizations
+--LOOKING AT TOTAL CASES VS TOTAL DEATHS
+
+Create View CasesVSDeath as
+select location, date, total_cases, total_deaths, cast(total_deaths as bigint)/ (NULLIF(cast(total_cases as float),0))*100 AS deathPercentage
+from PortfolioDatabase.dbo.[Covid deaths]
+where location like 'United_States'
+--order by 1, 2
+
+--Creating View to store data for later visualizations
+--Looking at Total Cases vs Population
+--Shows percentage of population who got Covid by Country
+
+Create View CasesVSPopulation as
+Select Location, date, Population, total_cases, cast(total_cases as bigint)/ (nullif(cast(population as float),0))*100 as PercentPopulationInfected
+From PortfolioDatabase.dbo.[Covid deaths]
+where location like 'United_States'
+--order by 1,2
